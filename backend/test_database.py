@@ -156,6 +156,61 @@ class DocumentDownloadIntegrationTests(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["detail"], "Original document not found.")
 
+    def test_query_requests_selected_answer_language(self):
+        self.assertEqual(self.upload(b"Original bytes.").status_code, 200)
+
+        for language, expected_language in (
+            (None, "English"),
+            ("en", "English"),
+            ("es", "Spanish"),
+        ):
+            with self.subTest(language=language):
+                payload = {"query": "A test question?"}
+                if language is not None:
+                    payload["language"] = language
+                self.client.models.generate_content.reset_mock()
+
+                response = self.http.post("/query", json=payload)
+
+                self.assertEqual(response.status_code, 200)
+                self.client.models.generate_content.assert_called_once()
+                prompt = self.client.models.generate_content.call_args.kwargs["contents"]
+                self.assertIn(
+                    f"Respond in {expected_language}, even if the question or context "
+                    "uses another language.",
+                    prompt,
+                )
+                self.assertIn("A test question?", prompt)
+                self.assertIn("A test document.", prompt)
+                self.assertEqual(
+                    response.json()["citations"][0]["file_path"], self.file_path
+                )
+
+    def test_empty_database_answer_uses_selected_language(self):
+        for language, expected_answer in (
+            ("en", "No documents found in database."),
+            ("es", "No se encontraron documentos en la base de datos."),
+        ):
+            with self.subTest(language=language):
+                response = self.http.post(
+                    "/query", json={"query": "A test question?", "language": language}
+                )
+
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    response.json(), {"answer": expected_answer, "citations": []}
+                )
+        self.client.models.generate_content.assert_not_called()
+
+    def test_unsupported_answer_language_is_rejected(self):
+        response = self.http.post(
+            "/query", json={"query": "A test question?", "language": "fr"}
+        )
+
+        self.assertEqual(response.status_code, 422)
+        self.client.models.embed_content.assert_not_called()
+        self.client.models.generate_content.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

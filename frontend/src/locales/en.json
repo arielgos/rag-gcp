@@ -1,0 +1,41 @@
+{
+  "app": {
+    "title": "MarkItDown + Gemini RAG",
+    "technology": "Cloud SQL (pgvector) + FlashRank",
+    "language": "Language"
+  },
+  "languages": {
+    "en": "English",
+    "es": "Español"
+  },
+  "upload": {
+    "title": "Document Ingestion",
+    "description": "Upload any file (<formats>PDF, DOCX, XLSX, PPTX</formats>). MarkItDown will parse it into markdown, embed it with Gemini, and index it into Postgres.",
+    "selectDocument": "Select a document",
+    "sizeLimit": "Up to 32MB",
+    "submit": "Ingest Document",
+    "uploading": "Uploading document",
+    "success_one": "Indexed \"{{documentName}}\" successfully ({{count}} chunk created).",
+    "success_other": "Indexed \"{{documentName}}\" successfully ({{count}} chunks created)."
+  },
+  "query": {
+    "placeholder": "Ask a question about your uploaded documents...",
+    "submit": "Ask question",
+    "loading": "Searching documents"
+  },
+  "answer": {
+    "title": "Gemini Answer",
+    "sources": "Reranked Sources & Citations ({{count}})"
+  },
+  "citation": {
+    "score": "Score: {{score}}",
+    "download": "Download original document",
+    "unavailable": "Original unavailable. Re-upload this document to enable downloads."
+  },
+  "errors": {
+    "uploadFailed": "Upload failed",
+    "queryFailed": "Query failed",
+    "query": "Error: {{message}}",
+    "languageChangeFailed": "Could not change language. Please try again."
+  }
+}

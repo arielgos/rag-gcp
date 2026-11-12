@@ -47,6 +47,58 @@ Stopping the stack preserves database data. To also delete the local database:
 docker compose down -v
 ```
 
+## Frontend development
+
+The frontend uses React, TypeScript, and Vite. With Node.js 20.19+ and npm:
+
+```sh
+cd frontend
+npm ci
+npm run dev
+```
+
+The development server runs at http://localhost:3000 and connects to the backend
+at http://localhost:8080 by default. Set `VITE_API_URL` to use another backend.
+This variable is embedded at build time for production.
+
+```sh
+npm run typecheck
+npm run build
+```
+
+The production build type-checks both the React application and Vite configuration
+before bundling. Docker uses the same build command.
+
+The app layout lives in `frontend/src/App.tsx`. Feature components are in
+`frontend/src/components/`: `DocumentIngestion` handles uploads, `QueryPanel`
+handles questions, and `AnswerCard` and `CitationCard` display answers and sources.
+Shared API requests and response types live in `frontend/src/api.ts`.
+
+### Frontend languages
+
+The UI supports English and Spanish using i18next and react-i18next. It first
+checks the saved language preference, then the browser's preferred languages,
+and falls back to English. Regional variants such as `es-AR` use their base
+language. The header language selector saves the choice in local storage under
+`rag-language`. The page's language metadata is updated with the selection.
+
+Translations live in `frontend/src/locales/en.json` and `es.json`; keep their
+keys aligned. Translation keys are type-checked against the English dictionary.
+To add another language, add its dictionary and register it in
+`frontend/src/i18n.ts` and `LanguageSwitcher`. Also extend the query-language
+mapping in `frontend/src/api.ts` and the backend's `QueryRequest` schema and
+answer-language instructions.
+
+Queries send the active UI language as `language: "en"` or `language: "es"` to
+`POST /query`. The backend requests a generated answer in that language, regardless
+of the question or document language. Its empty-database response is also
+localized. Clients that omit `language` default to English; unsupported language
+codes return HTTP 422. Changing the UI language affects subsequent queries, not
+answers already displayed.
+
+Uploaded documents, filenames, retrieved source content, and backend error
+details are left unchanged.
+
 ## Backend formatting
 
 The backend has its own Prettier configuration for supported files such as JSON,

@@ -3,7 +3,7 @@ import json
 import shutil
 import tempfile
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Literal, Optional
 from urllib.parse import quote
 
 from fastapi import FastAPI, UploadFile, File, HTTPException
@@ -46,6 +46,7 @@ def on_startup():
 # Request/Response schemas
 class QueryRequest(BaseModel):
     query: str
+    language: Literal["en", "es"] = "en"
     top_candidates: int = 25
     top_reranked: int = 5
 
@@ -213,7 +214,12 @@ async def query_rag(req: QueryRequest):
             rows = cur.fetchall()
 
     if not rows:
-        return QueryResponse(answer="No documents found in database.", citations=[])
+        answer = (
+            "No se encontraron documentos en la base de datos."
+            if req.language == "es"
+            else "No documents found in database."
+        )
+        return QueryResponse(answer=answer, citations=[])
 
     # 3. Stage 2: Rerank using FlashRank
     passages = [
@@ -248,10 +254,13 @@ async def query_rag(req: QueryRequest):
     full_context = "\n\n---\n\n".join(context_blocks)
 
     # 4. Generate Answer with Gemini
+    response_language = "Spanish" if req.language == "es" else "English"
     prompt = f"""You are a helpful and precise assistant. 
 Answer the following question solely based on the provided Markdown context. 
+Respond in {response_language}, even if the question or context uses another language.
 If the information is not in the context, explicitly state that you don't know. 
 Always reference the file path when citing facts.
+Keep document names and file paths unchanged.
 
 Context:
 {full_context}
