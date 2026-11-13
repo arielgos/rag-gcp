@@ -1,5 +1,4 @@
-# rag+gcp
-Rag on  GCP
+# RAG+GCP
 
 ## Run locally with Docker Compose
 
