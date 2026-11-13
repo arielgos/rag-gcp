@@ -5,10 +5,15 @@ Rag on  GCP
 
 Requires Docker with the Compose plugin and a Gemini API key.
 
+From the repository root, create a `.env` file with your API key (this file is
+git-ignored):
+
 ```sh
-export GEMINI_API_KEY="your-gemini-api-key"
-docker compose up --build -d
+echo 'GEMINI_API_KEY="your-gemini-api-key"' > .env
+bash local.sh
 ```
+
+`local.sh` loads `.env` and builds and starts the services in the background.
 
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8080 (docs at `/docs`, health at `/health`)
