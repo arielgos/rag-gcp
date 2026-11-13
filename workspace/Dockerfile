@@ -30,6 +30,7 @@ WORKDIR /workspace
 
 # Python dependencies
 COPY requirements.txt .
+COPY scripts/ .
 
 RUN pip install --no-cache-dir -r requirements.txt
 

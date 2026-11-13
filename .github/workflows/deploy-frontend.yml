@@ -1,0 +1,95 @@
+name: Deploy Frontend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - frontend/**
+      - .github/workflows/deploy-frontend.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  CLOUD_RUN_SERVICE: ${{ vars.FRONTEND_CLOUD_RUN_SERVICE || 'rag-gcp-frontend' }}
+  CLOUD_RUN_REGION: ${{ vars.CLOUD_RUN_REGION || 'us-central1' }}
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  ARTIFACT_REGISTRY_REPOSITORY: ${{ vars.ARTIFACT_REGISTRY_REPOSITORY }}
+  FRONTEND_RUNTIME_SERVICE_ACCOUNT: ${{ vars.FRONTEND_RUNTIME_SERVICE_ACCOUNT }}
+  VITE_API_URL: ${{ vars.VITE_API_URL }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate deployment configuration
+        env:
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+        run: |
+          set -euo pipefail
+          : "${GCP_PROJECT_ID:?Set the GCP_PROJECT_ID repository secret}"
+          : "${GCP_SERVICE_ACCOUNT:?Set the GCP_SERVICE_ACCOUNT repository secret}"
+          : "${GCP_WORKLOAD_IDENTITY_PROVIDER:?Set the GCP_WORKLOAD_IDENTITY_PROVIDER repository secret}"
+          : "${ARTIFACT_REGISTRY_REPOSITORY:?Set the ARTIFACT_REGISTRY_REPOSITORY repository variable}"
+          : "${FRONTEND_RUNTIME_SERVICE_ACCOUNT:?Set the FRONTEND_RUNTIME_SERVICE_ACCOUNT repository variable}"
+          : "${VITE_API_URL:?Set the VITE_API_URL repository variable to the backend HTTPS URL}"
+          node -e '
+            const url = new URL(process.env.VITE_API_URL);
+            if (url.protocol !== "https:" || url.username || url.password ||
+                url.pathname !== "/" || url.search || url.hash) {
+              throw new Error("VITE_API_URL must be an HTTPS origin without credentials, a path, query, or fragment");
+            }
+          '
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker authentication
+        run: gcloud auth configure-docker "${CLOUD_RUN_REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and push frontend image
+        id: build
+        run: |
+          set -euo pipefail
+          IMAGE_URI="${CLOUD_RUN_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REGISTRY_REPOSITORY}/${CLOUD_RUN_SERVICE}:${GITHUB_SHA}"
+          docker build \
+            --build-arg "VITE_API_URL=${VITE_API_URL%/}" \
+            --tag "$IMAGE_URI" \
+            ./frontend
+          docker push "$IMAGE_URI"
+          echo "image=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service: ${{ env.CLOUD_RUN_SERVICE }}
+          region: ${{ env.CLOUD_RUN_REGION }}
+          image: ${{ steps.build.outputs.image }}
+          flags: >-
+            --allow-unauthenticated
+            --port=8080
+            --service-account=${{ env.FRONTEND_RUNTIME_SERVICE_ACCOUNT }}
+
+      - name: Verify frontend deployment
+        env:
+          SERVICE_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          curl --fail --silent --show-error --retry 3 "$SERVICE_URL/" --output /dev/null
+          echo "Deployed URL: $SERVICE_URL"

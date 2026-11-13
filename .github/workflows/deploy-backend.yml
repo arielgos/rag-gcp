@@ -1,0 +1,80 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - backend/**
+      - .github/workflows/deploy-backend.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  CLOUD_RUN_SERVICE: ${{ vars.CLOUD_RUN_SERVICE || 'rag-gcp-backend' }}
+  CLOUD_RUN_REGION: ${{ vars.CLOUD_RUN_REGION || 'us-central1' }}
+  CLOUD_SQL_INSTANCE_CONNECTION_NAME: ${{ vars.CLOUD_SQL_INSTANCE_CONNECTION_NAME }}
+  BACKEND_RUNTIME_SERVICE_ACCOUNT: ${{ vars.BACKEND_RUNTIME_SERVICE_ACCOUNT || format('rag-gcp-backend-runtime@{0}.iam.gserviceaccount.com', secrets.GCP_PROJECT_ID) }}
+  DB_NAME: ${{ vars.DB_NAME || 'ragdb' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate deployment configuration
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+          GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          CLOUD_SQL_INSTANCE_CONNECTION_NAME: ${{ env.CLOUD_SQL_INSTANCE_CONNECTION_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          : "${GCP_PROJECT_ID:?Set the GCP_PROJECT_ID repository secret}"
+          : "${GCP_SERVICE_ACCOUNT:?Set the GCP_SERVICE_ACCOUNT repository secret}"
+          : "${GCP_WORKLOAD_IDENTITY_PROVIDER:?Set the GCP_WORKLOAD_IDENTITY_PROVIDER repository secret}"
+          : "${CLOUD_SQL_INSTANCE_CONNECTION_NAME:?Set the CLOUD_SQL_INSTANCE_CONNECTION_NAME repository variable}"
+          : "${DB_USER:?Set the DB_USER repository secret}"
+          : "${DB_PASS:?Set the DB_PASS repository secret}"
+          : "${GEMINI_API_KEY:?Set the GEMINI_API_KEY repository secret}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service: ${{ env.CLOUD_RUN_SERVICE }}
+          region: ${{ env.CLOUD_RUN_REGION }}
+          source: ./backend
+          flags: >-
+            --allow-unauthenticated
+            --add-cloudsql-instances=${{ env.CLOUD_SQL_INSTANCE_CONNECTION_NAME }}
+            --service-account=${{ env.BACKEND_RUNTIME_SERVICE_ACCOUNT }}
+          env_vars: |
+            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASS=${{ secrets.DB_PASS }}
+            DB_NAME=${{ env.DB_NAME }}
+            INSTANCE_CONNECTION_NAME=${{ env.CLOUD_SQL_INSTANCE_CONNECTION_NAME }}
+
+      - name: Show service URL
+        run: |
+          echo "Deployed URL: ${{ steps.deploy.outputs.url }}"
