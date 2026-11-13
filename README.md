@@ -58,13 +58,12 @@ docker compose down -v
 
 The [backend deployment workflow](./.github/workflows/deploy-backend.yml) deploys
 on pushes to `main` that change `backend/` or the workflow, and can also be run
-manually. Run `workspace/scripts/setup.sh` first to configure the Google Cloud
+manually. Run `workspace/setup.sh` first to configure the Google Cloud
 APIs, Workload Identity Federation, and service accounts.
 
 Configure these GitHub Actions repository secrets:
 
 - `GCP_PROJECT_ID`
-- `GCP_SERVICE_ACCOUNT` (the deployer service account email)
 - `GCP_WORKLOAD_IDENTITY_PROVIDER` (the full provider resource name printed by
   the setup script)
 - `GEMINI_API_KEY`
@@ -73,11 +72,12 @@ Configure these GitHub Actions repository secrets:
 
 Also set the required repository variable `CLOUD_SQL_INSTANCE_CONNECTION_NAME`
 to the Cloud SQL instance connection name (`project:region:instance`). The
-workflow defaults `DB_NAME` to `ragdb` and the backend runtime service account
-to `rag-gcp-backend-runtime@<project-id>.iam.gserviceaccount.com`; set optional
-`DB_NAME` or `BACKEND_RUNTIME_SERVICE_ACCOUNT` variables to override these.
-The Cloud SQL instance must contain the database configured by `DB_NAME` and
-support pgvector.
+workflow defaults `DB_NAME` to `ragdb`. Set the required
+`BACKEND_RUNTIME_SERVICE_ACCOUNT` repository variable to the backend service
+account email created by the setup script. This account is used both to
+authenticate the workflow through Workload Identity Federation and as the
+Cloud Run runtime identity. The Cloud SQL instance must contain the database
+configured by `DB_NAME` and support pgvector.
 
 The backend is deployed with unauthenticated access so the browser frontend can
 call it. The API has no application authentication, so its upload, query, and
@@ -87,8 +87,8 @@ or sensitive documents.
 ## Deploy the frontend to Cloud Run
 
 The [frontend deployment workflow](./.github/workflows/deploy-frontend.yml) uses
-the same `GCP_PROJECT_ID`, `GCP_SERVICE_ACCOUNT`, and
-`GCP_WORKLOAD_IDENTITY_PROVIDER` repository secrets as the backend workflow.
+the same `GCP_PROJECT_ID` and `GCP_WORKLOAD_IDENTITY_PROVIDER` repository
+secrets as the backend workflow.
 Configure these additional repository variables:
 
 - `VITE_API_URL`: the backend's public HTTPS origin, without a path. This is
@@ -97,9 +97,9 @@ Configure these additional repository variables:
   the `CLOUD_RUN_REGION` region (defaults to `us-central1`). The deployer needs
   Artifact Registry Writer access, as granted by the setup script.
 - `FRONTEND_RUNTIME_SERVICE_ACCOUNT`: an existing, dedicated runtime service
-  account email. Serving the static frontend needs no project IAM roles.
-  Grant the deployer `roles/iam.serviceAccountUser` on this account before
-  deploying.
+  account email created by the setup script. It is used both to authenticate
+  the workflow through Workload Identity Federation and as the Cloud Run
+  runtime identity.
 - Optional `FRONTEND_CLOUD_RUN_SERVICE`: defaults to `rag-gcp-frontend`. This is
   separate from the backend's `CLOUD_RUN_SERVICE` variable to avoid overwriting
   the backend service.

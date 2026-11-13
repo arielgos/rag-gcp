@@ -7,6 +7,8 @@ export PROJECT_ID="rag-gcp-514613"
 export BACKEND_RUNTIME_SERVICE_ACCOUNT="github-cloud-run-backend@$PROJECT_ID.iam.gserviceaccount.com"
 export FRONTEND_RUNTIME_SERVICE_ACCOUNT="github-cloud-run-frontend@$PROJECT_ID.iam.gserviceaccount.com"
 
+export ARTIFACT_REGISTRY_REPOSITORY="rag-gcp-artifacts"
+
 export WORKLOAD_POOL_NAME="github-pool"
 export WORKLOAD_PROVIDER_NAME="github-provider"
 export GITHUB_REPOSITORY="arielgos/rag-gcp"
@@ -123,7 +125,6 @@ gcloud iam service-accounts add-iam-policy-binding \
   --role roles/iam.workloadIdentityUser \
   --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$WORKLOAD_POOL_NAME/attribute.repository/$GITHUB_REPOSITORY"
 
-
 gcloud iam service-accounts add-iam-policy-binding \
   "$FRONTEND_RUNTIME_SERVICE_ACCOUNT" \
   --project "$PROJECT_ID" \
@@ -133,12 +134,11 @@ gcloud iam service-accounts add-iam-policy-binding \
 
 # Create Artifact Registry repository
 echo "Creating Artifact Registry repository..."
-gcloud artifacts repositories create "cloud-run-source-deploy" \
+gcloud artifacts repositories create "$ARTIFACT_REGISTRY_REPOSITORY" \
   --repository-format=docker \
   --location=us-central1 \
   --description="Docker repository for Cloud Run source deployments" \
   --project "$PROJECT_ID"
-
 
 # Database setup
 
