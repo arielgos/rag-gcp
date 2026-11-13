@@ -28,7 +28,6 @@ jobs:
       - name: Validate deployment configuration
         env:
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           CLOUD_SQL_INSTANCE_CONNECTION_NAME: ${{ env.CLOUD_SQL_INSTANCE_CONNECTION_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
@@ -37,7 +36,6 @@ jobs:
         run: |
           set -euo pipefail
           : "${GCP_PROJECT_ID:?Set the GCP_PROJECT_ID repository secret}"
-          : "${GCP_SERVICE_ACCOUNT:?Set the GCP_SERVICE_ACCOUNT repository secret}"
           : "${GCP_WORKLOAD_IDENTITY_PROVIDER:?Set the GCP_WORKLOAD_IDENTITY_PROVIDER repository secret}"
           : "${CLOUD_SQL_INSTANCE_CONNECTION_NAME:?Set the CLOUD_SQL_INSTANCE_CONNECTION_NAME repository variable}"
           : "${DB_USER:?Set the DB_USER repository secret}"

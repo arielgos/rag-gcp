@@ -28,12 +28,10 @@ jobs:
     steps:
       - name: Validate deployment configuration
         env:
-          GCP_SERVICE_ACCOUNT: ${{ secrets.GCP_SERVICE_ACCOUNT }}
           GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
         run: |
           set -euo pipefail
           : "${GCP_PROJECT_ID:?Set the GCP_PROJECT_ID repository secret}"
-          : "${GCP_SERVICE_ACCOUNT:?Set the GCP_SERVICE_ACCOUNT repository secret}"
           : "${GCP_WORKLOAD_IDENTITY_PROVIDER:?Set the GCP_WORKLOAD_IDENTITY_PROVIDER repository secret}"
           : "${ARTIFACT_REGISTRY_REPOSITORY:?Set the ARTIFACT_REGISTRY_REPOSITORY repository variable}"
           : "${FRONTEND_RUNTIME_SERVICE_ACCOUNT:?Set the FRONTEND_RUNTIME_SERVICE_ACCOUNT repository variable}"
