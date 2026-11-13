@@ -34,6 +34,7 @@ gcloud services enable \
   artifactregistry.googleapis.com \
   sqladmin.googleapis.com \
   generativelanguage.googleapis.com \
+  sql-component.googleapis.com \
   --project "$PROJECT_ID"
 
 gcloud services list --enabled --project "$PROJECT_ID"
@@ -65,6 +66,10 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --member="serviceAccount:$BACKEND_RUNTIME_SERVICE_ACCOUNT" \
   --role="roles/storage.admin"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
+  --role="roles/cloudsql.client"
 
 # Create workload identity pool
 echo "Creating workload identity pool..."
