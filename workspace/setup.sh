@@ -3,7 +3,6 @@ set -euo pipefail
 
 # Set project ID for the current session
 export PROJECT_ID="rag-gcp-514613"
-
 export SERVICE_ACCOUNT_NAME="github-cloud-run-deployer"
 export BACKEND_RUNTIME_SERVICE_ACCOUNT="$BACKEND_RUNTIME_SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 
@@ -19,7 +18,7 @@ gcloud auth list
 # Set project ID and project number for the current session
 gcloud config set project "$PROJECT_ID"
 gcloud config list
-PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
+export PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
 
 echo "Enabling GCP services..."
 gcloud services enable \
@@ -34,7 +33,6 @@ gcloud services enable \
   --project "$PROJECT_ID"
 
 gcloud services list --enabled --project "$PROJECT_ID"
-
 
 # Create service account
 echo "Creating service account..."
