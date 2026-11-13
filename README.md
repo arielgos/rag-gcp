@@ -35,6 +35,32 @@ shell in it with:
 docker compose exec workspace bash
 ```
 
+## Backend ingestion and retrieval
+
+```mermaid
+flowchart TD
+    upload["File upload"] --> ingest["POST /ingest"]
+    ingest --> temp["Temporary file"]
+    temp --> convert["MarkItDown: convert to Markdown"]
+    convert --> split["Split by Markdown headers<br/>fallback: recursive chunks"]
+    split --> embedChunks["Gemini embeddings<br/>gemini-embedding-001"]
+    embedChunks --> save["Transaction: upsert original<br/>and replace its chunks"]
+    save --> originals[("documents<br/>original bytes")]
+    save --> chunks[("document_chunks<br/>text, metadata, vectors")]
+
+    question["Question"] --> query["POST /query"]
+    query --> embedQuery["Gemini query embedding<br/>gemini-embedding-001"]
+    embedQuery --> search["Cloud SQL / pgvector<br/>HNSW cosine search<br/>top 25 candidates"]
+    chunks --> search
+    search --> rerank["FlashRank reranking<br/>top 5 passages"]
+    rerank --> context["Build context and citations"]
+    context --> generate["Gemini answer generation<br/>gemini-3.1-flash-lite"]
+    query --> generate
+    generate --> answer["Answer and citations"]
+    answer -. "citation download URL" .-> download["GET /documents/{id}/download"]
+    download --> originals
+```
+
 ### Download original documents
 
 New uploads retain their original bytes in PostgreSQL, in the same transaction
