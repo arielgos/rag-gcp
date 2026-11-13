@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "MarkItDown + Gemini RAG",
+    "title": "RAG + GCP",
     "technology": "Cloud SQL (pgvector) + FlashRank",
     "language": "Idioma"
   },

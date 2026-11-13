@@ -3,8 +3,9 @@ set -euo pipefail
 
 # Set project ID for the current session
 export PROJECT_ID="rag-gcp-514613"
-export SERVICE_ACCOUNT_NAME="github-cloud-run-deployer"
-export BACKEND_RUNTIME_SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
+
+export BACKEND_RUNTIME_SERVICE_ACCOUNT="github-cloud-run-backend@$PROJECT_ID.iam.gserviceaccount.com"
+export FRONTEND_RUNTIME_SERVICE_ACCOUNT="github-cloud-run-frontend@$PROJECT_ID.iam.gserviceaccount.com"
 
 export WORKLOAD_POOL_NAME="github-pool"
 export WORKLOAD_PROVIDER_NAME="github-provider"
@@ -41,7 +42,11 @@ gcloud services list --enabled --project "$PROJECT_ID"
 
 # Create service account
 echo "Creating service account..."
-gcloud iam service-accounts create "$SERVICE_ACCOUNT_NAME" \
+gcloud iam service-accounts create "github-cloud-run-backend" \
+  --project "$PROJECT_ID" \
+  --display-name "GitHub Cloud Run Backend Deployer"
+  
+gcloud iam service-accounts create "github-cloud-run-frontend" \
   --project "$PROJECT_ID" \
   --display-name "GitHub Cloud Run Deployer"
 
@@ -68,8 +73,29 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
   --role="roles/storage.admin"
 
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
-  --member="serviceAccount:$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
+  --member="serviceAccount:$BACKEND_RUNTIME_SERVICE_ACCOUNT" \
   --role="roles/cloudsql.client"
+
+# Frontend service account IAM policies
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$FRONTEND_RUNTIME_SERVICE_ACCOUNT" \
+  --role roles/run.admin
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$FRONTEND_RUNTIME_SERVICE_ACCOUNT" \
+  --role roles/cloudbuild.builds.editor
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$FRONTEND_RUNTIME_SERVICE_ACCOUNT" \
+  --role roles/artifactregistry.writer
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member "serviceAccount:$FRONTEND_RUNTIME_SERVICE_ACCOUNT" \
+  --role roles/iam.serviceAccountUser
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:$FRONTEND_RUNTIME_SERVICE_ACCOUNT" \
+  --role="roles/storage.admin"
 
 # Create workload identity pool
 echo "Creating workload identity pool..."
@@ -92,10 +118,18 @@ gcloud iam workload-identity-pools providers create-oidc "$WORKLOAD_PROVIDER_NAM
 # Bind the service account to workload identity
 echo "Binding service account to workload identity..."
 gcloud iam service-accounts add-iam-policy-binding \
-  "$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com" \
+  "$BACKEND_RUNTIME_SERVICE_ACCOUNT" \
   --project "$PROJECT_ID" \
   --role roles/iam.workloadIdentityUser \
   --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$WORKLOAD_POOL_NAME/attribute.repository/$GITHUB_REPOSITORY"
+
+
+gcloud iam service-accounts add-iam-policy-binding \
+  "$FRONTEND_RUNTIME_SERVICE_ACCOUNT" \
+  --project "$PROJECT_ID" \
+  --role roles/iam.workloadIdentityUser \
+  --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$WORKLOAD_POOL_NAME/attribute.repository/$GITHUB_REPOSITORY"
+
 
 # Create Artifact Registry repository
 echo "Creating Artifact Registry repository..."
