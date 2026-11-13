@@ -18,6 +18,14 @@ export GITHUB_BRANCH="main"
 gcloud auth login
 gcloud auth list
 
+gcloud projects create "$PROJECT_ID"
+
+gcloud billing accounts list
+export BILLING_ACCOUNT_ID="$(gcloud billing accounts list --format='value(ACCOUNT_ID)' | head -n 1)"
+echo "Billing account ID: $BILLING_ACCOUNT_ID"
+
+gcloud billing projects link "$PROJECT_ID" --billing-account="$BILLING_ACCOUNT_ID"
+
 # Set project ID and project number for the current session
 gcloud config set project "$PROJECT_ID"
 gcloud config list
