@@ -24,6 +24,13 @@ health check. The first build downloads dependencies and the FlashRank model.
 Document ingestion and queries use Gemini and require internet access.
 The database credentials in Compose are for local development only.
 
+The workspace container stays running with an interactive Bash shell. Open a
+shell in it with:
+
+```sh
+docker compose exec workspace bash
+```
+
 ### Download original documents
 
 New uploads retain their original bytes in PostgreSQL, in the same transaction

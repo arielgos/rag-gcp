@@ -49,5 +49,13 @@ services:
       backend:
         condition: service_healthy
 
+  workspace:
+    build:
+      context: ./workspace
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Set GEMINI_API_KEY before starting Compose}
+    stdin_open: true
+    tty: true
+
 volumes:
   postgres_data:
