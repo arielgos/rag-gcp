@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "RAG + GCP",
+    "title": "RAG + GCP + UPDS",
     "technology": "Cloud SQL (pgvector) + FlashRank",
     "language": "Idioma"
   },
