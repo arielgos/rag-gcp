@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Set project ID for the current session
-export PROJECT_ID="rag-gcp-514613"
+export PROJECT_ID="rag-gcp-upds-22"
 
 export BACKEND_RUNTIME_SERVICE_ACCOUNT="github-cloud-run-backend@$PROJECT_ID.iam.gserviceaccount.com"
 export FRONTEND_RUNTIME_SERVICE_ACCOUNT="github-cloud-run-frontend@$PROJECT_ID.iam.gserviceaccount.com"
@@ -11,7 +11,7 @@ export ARTIFACT_REGISTRY_REPOSITORY="rag-gcp-artifacts"
 
 export WORKLOAD_POOL_NAME="github-pool"
 export WORKLOAD_PROVIDER_NAME="github-provider"
-export GITHUB_REPOSITORY="arielgos/rag-gcp"
+export GITHUB_REPOSITORY="arielgos/rag-gcp-22"
 export GITHUB_BRANCH="main"
 
 # Authenticate with Google Cloud
