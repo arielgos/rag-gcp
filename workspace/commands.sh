@@ -148,6 +148,11 @@ gcloud artifacts repositories create "$ARTIFACT_REGISTRY_REPOSITORY" \
   --description="Docker repository for Cloud Run source deployments" \
   --project "$PROJECT_ID"
 
+gcloud artifacts repositories create cloud-run-source-deploy \
+  --repository-format=docker \
+  --location=us-central1 \
+  --project="$PROJECT_ID"
+
 # Database setup
 
 export REGION="us-central1"
