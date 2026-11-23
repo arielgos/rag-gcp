@@ -84,18 +84,60 @@ Stopping the stack preserves database data. To also delete the local database:
 docker compose down -v
 ```
 
+## Provision Google Cloud with the setup wizard
+
+Before the first deployment, run the interactive setup wizard to provision
+everything the Cloud Run workflows need. It requires the
+[gcloud CLI](https://cloud.google.com/sdk/docs/install) and an account with
+permission to create projects and link billing:
+
+```sh
+bash workspace/wizard.sh
+```
+
+The wizard walks through ten steps, asking for the data each step needs and
+showing every `gcloud` command before running it:
+
+1. **Authentication**: reuses the active `gcloud` account or logs in.
+2. **Project**: asks for a project ID, creates the project if it does not
+   exist, and sets it as the active configuration.
+3. **Billing**: lists your billing accounts and links the chosen one.
+4. **Service activation**: enables the required APIs (IAM, STS, Cloud Run,
+   Cloud Build, Artifact Registry, Cloud SQL, Generative Language).
+5. **Service accounts**: creates the backend and frontend deployer/runtime
+   service accounts.
+6. **IAM bindings**: grants each service account its roles (Cloud Run admin,
+   Cloud Build editor, Artifact Registry writer, service account user, storage
+   admin, and Cloud SQL client for the backend).
+7. **Workload Identity Federation**: creates the identity pool and GitHub OIDC
+   provider restricted to your repository, and lets the repository impersonate
+   both service accounts.
+8. **Artifact Registry**: creates the Docker repository for frontend images
+   and, optionally, `cloud-run-source-deploy` for backend source deploys.
+9. **Cloud SQL**: creates a PostgreSQL 15 instance with Google ML integration,
+   the database, and the user, then offers to open `gcloud sql connect` so you
+   can run `CREATE EXTENSION IF NOT EXISTS vector;` for pgvector.
+10. **Summary**: prints the values needed for the GitHub Actions secrets and
+    variables below, including the full Workload Identity provider resource
+    name, the service account emails, and the Cloud SQL connection name.
+
+Every step can be skipped, each command asks for confirmation and offers a
+retry on failure, and existing resources are detected and reused, so the wizard
+is safe to re-run on a partially provisioned project. The commands it runs are
+also listed in `workspace/commands.sh` for non-interactive reference.
+
 ## Deploy the backend to Cloud Run
 
 The [backend deployment workflow](./.github/workflows/deploy-backend.yml) deploys
 on pushes to `main` that change `backend/` or the workflow, and can also be run
-manually. Run `workspace/setup.sh` first to configure the Google Cloud
+manually. Run `workspace/wizard.sh` first to configure the Google Cloud
 APIs, Workload Identity Federation, and service accounts.
 
 Configure these GitHub Actions repository secrets:
 
 - `GCP_PROJECT_ID`
-- `GCP_WORKLOAD_IDENTITY_PROVIDER` (the full provider resource name printed by
-  the setup script)
+- `GCP_WORKLOAD_IDENTITY_PROVIDER` (the full provider resource name printed in
+  the wizard's summary)
 - `GEMINI_API_KEY`
 - `DB_USER`
 - `DB_PASS`
@@ -104,7 +146,7 @@ Also set the required repository variable `CLOUD_SQL_INSTANCE_CONNECTION_NAME`
 to the Cloud SQL instance connection name (`project:region:instance`). The
 workflow defaults `DB_NAME` to `ragdb`. Set the required
 `BACKEND_RUNTIME_SERVICE_ACCOUNT` repository variable to the backend service
-account email created by the setup script. This account is used both to
+account email created by the wizard. This account is used both to
 authenticate the workflow through Workload Identity Federation and as the
 Cloud Run runtime identity. The Cloud SQL instance must contain the database
 configured by `DB_NAME` and support pgvector.
@@ -125,9 +167,9 @@ Configure these additional repository variables:
   embedded during the Docker build; changing it requires redeployment.
 - `ARTIFACT_REGISTRY_REPOSITORY`: the name of an existing Docker repository in
   the `CLOUD_RUN_REGION` region (defaults to `us-central1`). The deployer needs
-  Artifact Registry Writer access, as granted by the setup script.
+  Artifact Registry Writer access, as granted by the wizard.
 - `FRONTEND_RUNTIME_SERVICE_ACCOUNT`: an existing, dedicated runtime service
-  account email created by the setup script. It is used both to authenticate
+  account email created by the wizard. It is used both to authenticate
   the workflow through Workload Identity Federation and as the Cloud Run
   runtime identity.
 - Optional `FRONTEND_CLOUD_RUN_SERVICE`: defaults to `rag-gcp-frontend`. This is
