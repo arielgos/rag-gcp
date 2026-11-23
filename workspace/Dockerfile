@@ -33,6 +33,8 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY ./*.sh /workspace/
+
 EXPOSE 8000 8888
 
 CMD ["bash"]
